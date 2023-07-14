@@ -52,6 +52,7 @@ namespace argmap {
  *   bool t = false;
  *   bool f = true;
  *   std::string k = "Hello World";
+ *   std::string aliases = "Aliases";
  *
  *   ArgMap()                                    // (*) marks default.
  *     .required()                               // set args to required.
@@ -62,6 +63,7 @@ namespace argmap {
  *     .named()                                  // named args (*) e.g.k=v.
  *     .separator(ArgMap::Separator::WHITESPACE) // change separator to
  *       .arg("-k", k, "doc for k", "")          // whitespace ('=' is (*)).
+ *       .arg({"-q", "--r", "--sos"}, aliases)   //
  *       .note("an extra note")                  // no default value info.
  *     .toggle()                                 // add extra doc/note.
  *        .arg("-t", t, "doc for t", "")         // toggle flag sets bool true.
@@ -418,19 +420,21 @@ static void splitOnSeparator(std::forward_list<std::string>& args_lst, char sep)
     return;
 
   for (auto it = args_lst.begin(); it != args_lst.end(); ++it) {
-    if (it->size() != 1) {
-      std::size_t pos = it->find(sep);
-      if (pos != std::string::npos) {
-        if (pos == 0) {
-          std::string sub = it->substr(1, std::string::npos);
-          *it = sep;
-          args_lst.insert_after(it, sub);
-        } else {
-          std::string sub = it->substr(pos);
-          *it = it->substr(0, pos);
-          args_lst.insert_after(it, sub);
-        }
-      }
+    if (it->size() == 1)
+      continue;
+
+    std::size_t pos = it->find(sep);
+    if (pos == std::string::npos)
+      continue;
+
+    if (pos == 0) {
+      std::string sub = it->substr(1, std::string::npos);
+      *it = sep;
+      args_lst.insert_after(it, sub);
+    } else {
+      std::string sub = it->substr(pos);
+      *it = it->substr(0, pos);
+      args_lst.insert_after(it, sub);
     }
   }
 }
@@ -629,7 +633,7 @@ inline void ArgMap::usage(const std::string& msg) const
   if (!msg.empty())
     std::cerr << msg << '\n';
 
-  decltype(docVec) docVecCopy = docVec;
+  auto docVecCopy = docVec;
   std::stable_partition(docVecCopy.begin(),
                         docVecCopy.end(),
                         [this](const auto& item) {
