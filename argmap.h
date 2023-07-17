@@ -528,6 +528,10 @@ public:
 template <typename T>
 ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names, T& value)
 {
+  // Must have at least one alias
+  if (std::empty(names))
+    throw std::logic_error("`arg` given without at least one alias name");
+
   // have we seen this addr before?
   if (addresses_used.count(&value) != 0)
     throw std::logic_error("Attempting to register variable twice");
@@ -555,17 +559,20 @@ ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names, T& value)
       this->positional_args_list.insert(name, !this->required_mode);
     }
 
-    if (this->required_mode) {
-      // The user should make toggles correct in the code with optional
-      if (this->arg_type == ArgType::TOGGLE_TRUE ||
-          this->arg_type == ArgType::TOGGLE_FALSE)
-        throw std::logic_error("Toggle argument types cannot be required.");
-      this->required_set.insert(name);
-    } else {
-      // It is optional
-      this->optional_set.insert(name);
-    }
   }
+    
+  // Only take the first alias
+  if (this->required_mode) {
+    // The user should make toggles correct in the code with optional
+    if (this->arg_type == ArgType::TOGGLE_TRUE ||
+        this->arg_type == ArgType::TOGGLE_FALSE)
+      throw std::logic_error("Toggle argument types cannot be required.");
+    this->required_set.insert(std::data(names)[0]);
+  } else {
+    // It is optional
+    this->optional_set.insert(std::data(names)[0]);
+  }
+
   return *this;
 }
 
@@ -638,9 +645,10 @@ inline void ArgMap::usage(const std::string& msg) const
                         docVecCopy.end(),
                         [this](const auto& item) {
                           const auto& it = map.find(std::get<0>(item));
+                          std::string name_ext(std::get<0>(item));
                           if (it == map.end())
                             throw std::logic_error("Not found in map '" +
-                                                   std::get<0>(item) + "'.");
+                                                   name_ext + "'.");
                           return it->second->getArgType() !=
                                  ArgType::POSITIONAL;
                         });

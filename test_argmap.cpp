@@ -1459,6 +1459,20 @@ TEST(TestArgMap, whitespaceInNameOfArg)
 }
 
 
+TEST_F(TestArgMapCmdLine, failOnReadInNoAliasesCmdLine)
+{
+  mockCmdLineArgs("./prog -a");
+  struct Opts
+  {
+    bool apple = true;
+  } opts;
+
+  auto argmap = ArgMap();
+  argmap.toggle(false);
+
+  EXPECT_THROW(argmap.arg({""}, opts.apple, ""), std::logic_error);
+}
+
 TEST_F(TestArgMapCmdLine, readInAliasesCmdLine)
 {
   mockCmdLineArgs("./prog -a");
