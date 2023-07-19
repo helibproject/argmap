@@ -158,9 +158,13 @@ public:
   using ArgProcessorPtr = std::shared_ptr<ArgProcessor>;
   NameToProcessMap() = default;
 
-  ArgProcessorPtr& operator[](const std::string &key) {
-    const auto &name = alias_to_name[key];
-    return name_to_process[name]; 
+  // TODO cannot have operator[] in this API dues to the interplay between the two maps
+  void insert(const std::string &name, const ArgProcessorPtr &processor) {
+    name_to_process[name] = processor;
+  }
+
+  ArgProcessorPtr& insert(const std::string &name) {
+    return name_to_process[name];
   }
 
   ArgProcessorPtr& aliases(const std::initializer_list<std::string> &aliases, const ArgProcessorPtr &processor) {
@@ -587,7 +591,7 @@ ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names, T& value)
     if (map.contains(name))
       throw std::logic_error("Key already in arg map (key: " + name + ")");
 
-    map[name] = processor;
+    map.insert(name, processor);
 
     if (this->arg_type == ArgType::POSITIONAL) {
       this->positional_args_list.insert(name, !this->required_mode);
@@ -678,8 +682,8 @@ inline void ArgMap::usage(const std::string& msg) const
   std::stable_partition(docVecCopy.begin(),
                         docVecCopy.end(),
                         [this](const auto& item) {
-                          const auto& it = map.find(std::get<0>(item));
-                          std::string name_ext(std::get<0>(item));
+                          std::string name_ext = std::get<0>(item);
+                          const auto& it = map.find(name_ext);
                           if (it == map.end())
                             throw std::logic_error("Not found in map '" +
                                                    name_ext + "'.");
