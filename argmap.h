@@ -42,6 +42,159 @@
 
 namespace argmap {
 
+static inline std::string join(const std::initializer_list<std::string>& words)
+{
+  char comma[] = {'\0', ' ', '\0'};
+  std::ostringstream joined;
+  for (const auto& word : words) {
+    joined << comma << word;
+    comma[0] = ',';
+  }
+  return joined.str();
+}
+
+enum class ArgType
+{
+  NAMED,
+  TOGGLE_TRUE,
+  TOGGLE_FALSE,
+  POSITIONAL, 
+  DOTS
+};
+
+/* ArgProcessor: A virtual base class that acts as the interface to hold
+ * args in a map of different types.
+ */
+struct ArgProcessor
+{
+  virtual ~ArgProcessor() = default;
+  virtual ArgType getArgType() = 0;
+  virtual bool process(const std::string& s) = 0;
+}; // end of ArgProcessor
+
+template <typename C>
+class ArgProcessorContainer : public ArgProcessor
+{
+private:
+  C* container;
+  ArgType arg_type = ArgType::DOTS;
+
+  using T = typename C::value_type;
+
+  // For strings. Avoids a stream breaking on whitespace.
+  template <typename U = T,
+            typename S,
+            typename std::enable_if_t<std::is_same<U, S>::value, int> = 0>
+  bool do_process(const S& s)
+  {
+    container->push_back(s);
+    return true;
+  }
+
+  // For non-string types, at the mercy of stringstream.
+  template <typename U = T,
+            typename S,
+            typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
+  bool do_process(const S& s)
+  {
+    std::istringstream iss(s);
+    U tmp_value;
+    bool rt = (iss >> tmp_value);
+    container->push_back(tmp_value);
+    return rt;
+  }
+
+public:
+  ArgType getArgType() override { return arg_type; }
+
+  bool process(const std::string& s) override { return this->do_process(s); }
+
+  explicit ArgProcessorContainer(C* c) : container(c) {}
+
+}; // end of ArgProcessorContainer
+
+
+// ArgProcessorValue: templated subclasses
+template <typename T>
+class ArgProcessorValue : public ArgProcessor
+{
+private:
+  T* value;
+  ArgType arg_type;
+
+  // For strings. Avoids a stream breaking on whitespace.
+  template <typename U = T,
+            typename S,
+            typename std::enable_if_t<std::is_same<U, S>::value, int> = 0>
+  bool do_process(const S& s)
+  {
+    *value = s;
+    return true;
+  }
+
+  // For non-string types, at the mercy of stringstream.
+  template <typename U = T,
+            typename S,
+            typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
+  bool do_process(const S& s)
+  {
+    std::istringstream iss(s);
+    return bool(iss >> *value);
+  }
+
+public:
+  ArgType getArgType() override { return arg_type; }
+
+  bool process(const std::string& s) override { return this->do_process(s); }
+
+  explicit ArgProcessorValue(T* v, ArgType at) : value(v), arg_type(at) {}
+}; // end of ArgProcessorValue
+
+/**
+ * @brief class for handlgin names (and their aliases) to which processes to use.
+ **/
+class NameToProcessMap {
+public:
+  using ArgProcessorPtr = std::shared_ptr<ArgProcessor>;
+  NameToProcessMap() = default;
+
+  ArgProcessorPtr& operator[](const std::string &key) {
+    const auto &name = alias_to_name[key];
+    return name_to_process[name]; 
+  }
+
+  ArgProcessorPtr& aliases(const std::initializer_list<std::string> &aliases, const ArgProcessorPtr &processor) {
+    // Sanity check - Must have at least one alias
+    if (std::empty(aliases))
+      throw std::logic_error("`arg` given without at least one alias name");
+
+    // First name will be the name used
+    const auto &name = std::data(aliases)[0]; 
+    for (const auto &alias: aliases) {
+      alias_to_name[alias] = name;
+    }
+    name_to_process[name] = processor;
+    return name_to_process[name]; 
+  }
+
+  bool contains(const std::string &name) const {
+    return name_to_process.count(name) > 0;
+  }
+
+  auto find(const std::string &name) const {
+    return name_to_process.find(name);
+  }
+
+  auto end() const {
+    return name_to_process.end();
+  }
+
+private:
+  std::unordered_map<std::string, std::shared_ptr<ArgProcessor>> name_to_process;
+  std::unordered_map<std::string, std::string> alias_to_name;
+};
+
+
 /**
  * @brief Basic class for arg parsing.
  * Example use:
@@ -74,18 +227,10 @@ namespace argmap {
  *                                               // parses and overwrites values
  * @endcode
  **/
+
 class ArgMap
 {
 private:
-  enum class ArgType
-  {
-    NAMED,
-    TOGGLE_TRUE,
-    TOGGLE_FALSE,
-    POSITIONAL,
-    DOTS
-  };
-
   // requires latching logic.
   class PositionalArgsList
   {
@@ -121,27 +266,6 @@ private:
     bool empty() { return this->positional_args.empty(); }
   }; // end of PositionalArgsList
 
-  struct ArgProcessor;
-
-  template <typename C>
-  class ArgProcessorContainer;
-
-  /* ArgProcessorValue: templated subclasses */
-  template <typename T>
-  class ArgProcessorValue;
-
-  static std::string join(const std::initializer_list<std::string>& words)
-  {
-    char comma[] = {'\0', ' ', '\0'};
-    std::ostringstream joined;
-    for (const auto& word : words) {
-      joined << comma << word;
-      comma[0] = ',';
-    }
-    return joined.str();
-  }
-
-private:
   ArgType arg_type = ArgType::NAMED;
   char kv_separator = '=';
   // Modes and other flags.
@@ -158,8 +282,8 @@ private:
   // Track what has been called previously whilst parsing.
   std::set<std::string> previous_call_set;
 
-  // Store the args.
-  std::unordered_map<std::string, std::shared_ptr<ArgProcessor>> map;
+  // Store the args and handle aliases.
+  NameToProcessMap map;
 
   // Docs held in vector until called by methods such as doc and usage
   // Triple (arg name (+ value),  docString, whether required)
@@ -439,99 +563,9 @@ static void splitOnSeparator(std::forward_list<std::string>& args_lst, char sep)
   }
 }
 
-/* ArgProcessor: A virtual base class that acts as the interface to hold
- * args in a map of different types.
- */
-struct ArgMap::ArgProcessor
-{
-  virtual ~ArgProcessor() = default;
-  virtual ArgType getArgType() = 0;
-  virtual bool process(const std::string& s) = 0;
-}; // end of ArgProcessor
-
-template <typename C>
-class ArgMap::ArgProcessorContainer : public ArgProcessor
-{
-private:
-  C* container;
-  ArgType arg_type = ArgType::DOTS;
-
-  using T = typename C::value_type;
-
-  // For strings. Avoids a stream breaking on whitespace.
-  template <typename U = T,
-            typename S,
-            typename std::enable_if_t<std::is_same<U, S>::value, int> = 0>
-  bool do_process(const S& s)
-  {
-    container->push_back(s);
-    return true;
-  }
-
-  // For non-string types, at the mercy of stringstream.
-  template <typename U = T,
-            typename S,
-            typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
-  bool do_process(const S& s)
-  {
-    std::istringstream iss(s);
-    U tmp_value;
-    bool rt = (iss >> tmp_value);
-    container->push_back(tmp_value);
-    return rt;
-  }
-
-public:
-  ArgType getArgType() override { return arg_type; }
-
-  bool process(const std::string& s) override { return this->do_process(s); }
-
-  explicit ArgProcessorContainer(C* c) : container(c) {}
-
-}; // end of ArgProcessorContainer
-
-template <typename T>
-class ArgMap::ArgProcessorValue : public ArgProcessor
-{
-private:
-  T* value;
-  ArgType arg_type;
-
-  // For strings. Avoids a stream breaking on whitespace.
-  template <typename U = T,
-            typename S,
-            typename std::enable_if_t<std::is_same<U, S>::value, int> = 0>
-  bool do_process(const S& s)
-  {
-    *value = s;
-    return true;
-  }
-
-  // For non-string types, at the mercy of stringstream.
-  template <typename U = T,
-            typename S,
-            typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
-  bool do_process(const S& s)
-  {
-    std::istringstream iss(s);
-    return bool(iss >> *value);
-  }
-
-public:
-  ArgType getArgType() override { return arg_type; }
-
-  bool process(const std::string& s) override { return this->do_process(s); }
-
-  explicit ArgProcessorValue(T* v, ArgType at) : value(v), arg_type(at) {}
-}; // end of ArgProcessorValue
-
 template <typename T>
 ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names, T& value)
 {
-  // Must have at least one alias
-  if (std::empty(names))
-    throw std::logic_error("`arg` given without at least one alias name");
-
   // have we seen this addr before?
   if (addresses_used.count(&value) != 0)
     throw std::logic_error("Attempting to register variable twice");
@@ -550,7 +584,7 @@ ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names, T& value)
           "Attempting to register an empty string or string with whitespace");
 
     // has this name already been added?
-    if (map.count(name) > 0)
+    if (map.contains(name))
       throw std::logic_error("Key already in arg map (key: " + name + ")");
 
     map[name] = processor;
@@ -889,7 +923,7 @@ inline ArgMap& ArgMap::parse(int argc, char** argv)
     std::ostringstream oss;
     oss << "Required argument(s) not given:\n";
     for (const auto& e : this->required_set)
-      oss << "\t" << e << '\n';
+      oss << '\t' << e << '\n';
     usage(oss.str()); // exits
   }
 
@@ -943,7 +977,7 @@ inline ArgMap& ArgMap::parse(const std::string& filepath)
     std::ostringstream oss;
     oss << "Required argument(s) not given:\n";
     for (const auto& e : this->required_set)
-      oss << "\t" << e << '\n';
+      oss << '\t' << e << '\n';
     throw std::runtime_error(oss.str());
   }
 
