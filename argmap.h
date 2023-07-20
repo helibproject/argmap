@@ -42,7 +42,7 @@
 
 namespace argmap {
 
-static inline std::string join(const std::initializer_list<std::string>& words)
+inline std::string join(const std::initializer_list<std::string>& words)
 {
   char comma[] = {'\0', ' ', '\0'};
   std::ostringstream joined;
