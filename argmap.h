@@ -58,7 +58,7 @@ enum class ArgType
   NAMED,
   TOGGLE_TRUE,
   TOGGLE_FALSE,
-  POSITIONAL, 
+  POSITIONAL,
   DOTS
 };
 
@@ -113,7 +113,6 @@ public:
 
 }; // end of ArgProcessorContainer
 
-
 // ArgProcessorValue: templated subclasses
 template <typename T>
 class ArgProcessorValue : public ArgProcessor
@@ -151,53 +150,71 @@ public:
 }; // end of ArgProcessorValue
 
 /**
- * @brief class for handlgin names (and their aliases) to which processes to use.
+ * @brief class for handlgin names (and their aliases) to which processes to
+ *use.
  **/
-class NameToProcessMap {
+class NameToProcessMap
+{
 public:
   using ArgProcessorPtr = std::shared_ptr<ArgProcessor>;
   NameToProcessMap() = default;
 
-  // TODO cannot have operator[] in this API dues to the interplay between the two maps
-  void insert(const std::string &name, const ArgProcessorPtr &processor) {
-    name_to_process[name] = processor;
+  void set_name_to_processor(const std::string& name,
+                             const ArgProcessorPtr& processor)
+  {
+    name_to_processor[name] = processor;
   }
 
-  ArgProcessorPtr& insert(const std::string &name) {
-    return name_to_process[name];
-  }
-
-  ArgProcessorPtr& aliases(const std::initializer_list<std::string> &aliases, const ArgProcessorPtr &processor) {
+  void set_aliases_to_processor(
+      const std::initializer_list<std::string>& aliases,
+      const ArgProcessorPtr& processor)
+  {
     // Sanity check - Must have at least one alias
     if (std::empty(aliases))
       throw std::logic_error("`arg` given without at least one alias name");
 
     // First name will be the name used
-    const auto &name = std::data(aliases)[0]; 
-    for (const auto &alias: aliases) {
+    const auto& name = std::data(aliases)[0];
+
+    for (const auto& alias : aliases) {
+      // has this name already been added?
+      if (contains(alias))
+        throw std::logic_error("Key already in arg map (key: " + alias + ")");
+
+      // trying to add empty or whitespace name?
+      if (alias.empty() ||
+          std::any_of(alias.begin(), alias.end(), [](unsigned char c) {
+            return std::isspace(c);
+          }))
+        throw std::logic_error("Attempting to register an empty string or "
+                               "string with whitespace '" +
+                               alias + "'");
+
       alias_to_name[alias] = name;
     }
-    name_to_process[name] = processor;
-    return name_to_process[name]; 
+    name_to_processor[name] = processor;
   }
 
-  bool contains(const std::string &name) const {
-    return name_to_process.count(name) > 0;
+  bool contains(const std::string& name) const
+  {
+    return alias_to_name.count(name) > 0;
   }
 
-  auto find(const std::string &name) const {
-    return name_to_process.find(name);
+  auto find(const std::string& name) const
+  {
+    if (!contains(name))
+      return name_to_processor.end();
+    const auto& key = alias_to_name.at(name);
+    return name_to_processor.find(key);
   }
 
-  auto end() const {
-    return name_to_process.end();
-  }
+  auto end() const { return name_to_processor.end(); }
 
 private:
-  std::unordered_map<std::string, std::shared_ptr<ArgProcessor>> name_to_process;
   std::unordered_map<std::string, std::string> alias_to_name;
+  std::unordered_map<std::string, std::shared_ptr<ArgProcessor>>
+      name_to_processor;
 };
-
 
 /**
  * @brief Basic class for arg parsing.
@@ -290,8 +307,8 @@ private:
   NameToProcessMap map;
 
   // Docs held in vector until called by methods such as doc and usage
-  // Triple (arg name (+ value),  docString, whether required)
-  std::vector<std::tuple<std::string, std::string, bool>> docVec;
+  // 4-tuple (key name, arg name (+ value),  docString, whether required)
+  std::vector<std::tuple<std::string, std::string, std::string, bool>> docVec;
 
   PositionalArgsList positional_args_list;
 
@@ -377,7 +394,7 @@ public:
    * Adds a new argument description with value of type T, with docs and
    * default description. Throws helib::RuntimeError if the arg key is
    * duplicated or if the storing variable is used more than once
-   * @tparam T The type of the argument
+   * @tparam V The type of the argument
    * @param name The argument name (key)
    * @param value a variable where the argument will be stored. Also used as
    * default value
@@ -474,8 +491,17 @@ public:
    * Overwrite default help toggle args to custom ones for parsing.
    * @return A reference to the ArgMap object
    */
-  ArgMap& helpArgs(const std::initializer_list<std::string> s);
-  ArgMap& helpArgs(const std::string s);
+  inline ArgMap& helpArgs(const std::initializer_list<std::string>& s)
+  {
+    this->help_tokens = s;
+    return *this;
+  }
+
+  inline ArgMap& helpArgs(const std::string& s)
+  {
+    this->help_tokens = {s};
+    return *this;
+  }
 
   /**
    * @brief Turns on diagnostics printout when parsing
@@ -517,7 +543,7 @@ public:
 }; // End of class ArgMap
 
 // Three functions strip whitespaces before and after strings.
-static inline void lstrip(std::string& s)
+inline void lstrip(std::string& s)
 {
   auto it = std::find_if(s.begin(), s.end(), [](unsigned char c) {
     return !std::isspace(c);
@@ -526,7 +552,7 @@ static inline void lstrip(std::string& s)
   s.erase(s.begin(), it);
 }
 
-static inline void rstrip(std::string& s)
+inline void rstrip(std::string& s)
 {
   auto it = std::find_if(s.rbegin(), s.rend(), [](unsigned char c) {
     return !std::isspace(c);
@@ -535,14 +561,14 @@ static inline void rstrip(std::string& s)
   s.erase(it.base(), s.end());
 }
 
-static inline void strip(std::string& s)
+inline void strip(std::string& s)
 {
   lstrip(s);
   rstrip(s);
 }
 
 // Correct the list from argv by splitting on the separator.
-static void splitOnSeparator(std::forward_list<std::string>& args_lst, char sep)
+inline void splitOnSeparator(std::forward_list<std::string>& args_lst, char sep)
 {
   if (sep == ' ')
     return;
@@ -568,7 +594,8 @@ static void splitOnSeparator(std::forward_list<std::string>& args_lst, char sep)
 }
 
 template <typename T>
-ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names, T& value)
+inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
+                           T& value)
 {
   // have we seen this addr before?
   if (addresses_used.count(&value) != 0)
@@ -578,44 +605,32 @@ ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names, T& value)
   auto processor =
       std::make_shared<ArgProcessorValue<T>>(&value, this->arg_type);
 
-  for (const auto& name : names) {
-    // trying to add empty or whitespace name?
-    if (name.empty() ||
-        std::any_of(name.begin(), name.end(), [](unsigned char c) {
-          return std::isspace(c);
-        }))
-      throw std::logic_error(
-          "Attempting to register an empty string or string with whitespace");
+  map.set_aliases_to_processor(names, processor);
+  // Key name is the designated name representing the whole alias group
+  // by our convention this is the first alias name given to arg
+  const auto& key_name = std::data(names)[0];
 
-    // has this name already been added?
-    if (map.contains(name))
-      throw std::logic_error("Key already in arg map (key: " + name + ")");
-
-    map.insert(name, processor);
-
-    if (this->arg_type == ArgType::POSITIONAL) {
-      this->positional_args_list.insert(name, !this->required_mode);
-    }
-
+  if (this->arg_type == ArgType::POSITIONAL) {
+    this->positional_args_list.insert(key_name, !this->required_mode);
   }
-    
-  // Only take the first alias
+
+  // Only take the first alias a.k.a. key name
   if (this->required_mode) {
     // The user should make toggles correct in the code with optional
     if (this->arg_type == ArgType::TOGGLE_TRUE ||
         this->arg_type == ArgType::TOGGLE_FALSE)
       throw std::logic_error("Toggle argument types cannot be required.");
-    this->required_set.insert(std::data(names)[0]);
+    this->required_set.insert(key_name);
   } else {
     // It is optional
-    this->optional_set.insert(std::data(names)[0]);
+    this->optional_set.insert(key_name);
   }
 
   return *this;
 }
 
 template <typename T>
-ArgMap& ArgMap::arg(const std::string& name, T& value)
+inline ArgMap& ArgMap::arg(const std::string& name, T& value)
 {
   // TODO
   const std::initializer_list<std::string> names{name};
@@ -624,27 +639,27 @@ ArgMap& ArgMap::arg(const std::string& name, T& value)
 }
 
 template <typename V>
-ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
-                    V& value,
-                    const std::string& doc)
+inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
+                           V& value,
+                           const std::string& doc)
 {
   arg(names, value);
-  std::ostringstream ss{doc};
-  ss << " [ default=" << value << " ]";
-  docVec.push_back({join(names), ss.str(), required_mode});
+  std::ostringstream ss;
+  ss << doc << " [ default=" << value << " ]";
+  docVec.push_back({std::data(names)[0], join(names), ss.str(), required_mode});
 
   return *this;
 }
 
 template <typename V>
-ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
-                    V& value,
-                    const std::string& doc,
-                    const char* info)
+inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
+                           V& value,
+                           const std::string& doc,
+                           const char* info)
 {
   arg(names, value);
 
-  docVec.push_back({join(names), doc, required_mode});
+  docVec.push_back({std::data(names)[0], join(names), doc, required_mode});
   if (info != nullptr && info[0] != '\0')
     std::get<1>(docVec.back()).append(" [ default=").append(info).append(" ]");
 
@@ -652,7 +667,7 @@ ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
 }
 
 template <typename C>
-ArgMap& ArgMap::dots(C& container, const char* name)
+inline ArgMap& ArgMap::dots(C& container, const char* name)
 {
   if (this->dots_enabled)
     throw std::logic_error(".dots() can only be called once.");
@@ -679,27 +694,26 @@ inline void ArgMap::usage(const std::string& msg) const
     std::cerr << msg << '\n';
 
   auto docVecCopy = docVec;
-  std::stable_partition(docVecCopy.begin(),
-                        docVecCopy.end(),
-                        [this](const auto& item) {
-                          std::string name_ext = std::get<0>(item);
-                          const auto& it = map.find(name_ext);
-                          if (it == map.end())
-                            throw std::logic_error("Not found in map '" +
-                                                   name_ext + "'.");
-                          return it->second->getArgType() !=
-                                 ArgType::POSITIONAL;
-                        });
+  std::stable_partition(
+      docVecCopy.begin(),
+      docVecCopy.end(),
+      [this](const auto& item) {
+        std::string name_ext = std::get<0>(item);
+        const auto& it = map.find(name_ext);
+        if (it == map.end())
+          throw std::logic_error("(A) Not found in map '" + name_ext + "'.");
+        return it->second->getArgType() != ArgType::POSITIONAL;
+      });
 
   std::cerr << "Usage: " << this->progname;
   for (const auto& doc : docVecCopy) {
     std::string name_ext(std::get<0>(doc));
     auto it = map.find(name_ext);
     if (it == map.end())
-      throw std::logic_error("Not found in map '" + name_ext + "'.");
+      throw std::logic_error("(B) Not found in map '" + name_ext + "'.");
     if (it->second->getArgType() == ArgType::NAMED)
       name_ext.append(1, this->kv_separator).append("<arg>");
-    if (std::get<2>(doc)) {
+    if (std::get<3>(doc)) {
       std::cerr << " " << name_ext;
     } else {
       std::cerr << " [" << name_ext << "]";
@@ -709,21 +723,9 @@ inline void ArgMap::usage(const std::string& msg) const
   if (this->dots_enabled)
     std::cerr << " [" << this->dots_name << " ...]";
 
-  std::cerr << doc() << "\n" << std::endl;
+  std::cerr << '\n' << doc() << std::endl;
 
   exit(EXIT_FAILURE);
-}
-
-inline ArgMap& ArgMap::helpArgs(const std::initializer_list<std::string> s)
-{
-  this->help_tokens = s;
-  return *this;
-}
-
-inline ArgMap& ArgMap::helpArgs(const std::string s)
-{
-  this->help_tokens = {s};
-  return *this;
 }
 
 inline ArgMap& ArgMap::separator(Separator s)
@@ -818,7 +820,7 @@ inline std::string ArgMap::doc() const
 
   for (const auto& p : docVec) {
     ss << "  " << std::left << std::setw(std::get<0>(*maxSzElem).length() + 1)
-       << std::get<0>(p) << std::setw(0) << std::get<1>(p) << '\n';
+       << std::get<1>(p) << std::setw(0) << std::get<2>(p) << '\n';
   }
 
   return ss.str();
@@ -892,7 +894,8 @@ inline void ArgMap::simpleParse(const std::forward_list<std::string>& args,
       // never a recognised token.
       std::shared_ptr<ArgProcessor> pos_ap = map.find(*pos_args_it)->second;
       if (!pos_ap->process(*it))
-        throw std::logic_error("Positional name does not match a ArgMap name.");
+        throw std::logic_error(
+            "Positional name does not match an ArgMap name.");
       // Remove from required_set (if it is there)
       this->required_set.erase(*pos_args_it);
       ++pos_args_it;
@@ -901,7 +904,7 @@ inline void ArgMap::simpleParse(const std::forward_list<std::string>& args,
     } else {
       std::string msg = "Unrecognised argument \'" + token + "\'";
       if (!this->positional_args_list.empty())
-        msg += "\nThere could be too many positional arguments";
+        msg.append("\nThere could be too many positional arguments");
       stop(msg);
     }
   }
