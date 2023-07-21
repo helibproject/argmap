@@ -84,7 +84,7 @@ private:
   template <typename U = T,
             typename S,
             typename std::enable_if_t<std::is_same<U, S>::value, int> = 0>
-  bool do_process(const S& s)
+  bool doProcess(const S& s)
   {
     container->push_back(s);
     return true;
@@ -94,7 +94,7 @@ private:
   template <typename U = T,
             typename S,
             typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
-  bool do_process(const S& s)
+  bool doProcess(const S& s)
   {
     std::istringstream iss(s);
     U tmp_value;
@@ -106,7 +106,7 @@ private:
 public:
   ArgType getArgType() override { return arg_type; }
 
-  bool process(const std::string& s) override { return this->do_process(s); }
+  bool process(const std::string& s) override { return this->doProcess(s); }
 
   explicit ArgProcessorContainer(C* c) : container(c) {}
 
@@ -124,7 +124,7 @@ private:
   template <typename U = T,
             typename S,
             typename std::enable_if_t<std::is_same<U, S>::value, int> = 0>
-  bool do_process(const S& s)
+  bool doProcess(const S& s)
   {
     *value = s;
     return true;
@@ -134,7 +134,7 @@ private:
   template <typename U = T,
             typename S,
             typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
-  bool do_process(const S& s)
+  bool doProcess(const S& s)
   {
     std::istringstream iss(s);
     return bool(iss >> *value);
@@ -143,7 +143,7 @@ private:
 public:
   ArgType getArgType() override { return arg_type; }
 
-  bool process(const std::string& s) override { return this->do_process(s); }
+  bool process(const std::string& s) override { return this->doProcess(s); }
 
   explicit ArgProcessorValue(T* v, ArgType at) : value(v), arg_type(at) {}
 }; // end of ArgProcessorValue
@@ -158,13 +158,13 @@ public:
   using ArgProcessorPtr = std::shared_ptr<ArgProcessor>;
   NameToProcessMap() = default;
 
-  void set_name_to_processor(const std::string& name,
+  void nameToProcessor(const std::string& name,
                              const ArgProcessorPtr& processor)
   {
     name_to_processor[name] = processor;
   }
 
-  void set_aliases_to_processor(
+  void aliasesToProcessor(
       const std::initializer_list<std::string>& aliases,
       const ArgProcessorPtr& processor)
   {
@@ -257,7 +257,7 @@ public:
 class ArgMap
 {
 private:
-  bool check_required_set_provided(std::string& msg) const
+  bool checkRequiredSetProvided(std::string& msg) const
   {
     if (this->required_set.empty())
       return true;
@@ -325,7 +325,7 @@ private:
    * @param duplicates If true does not fail in case of duplicated arguments
    * @param stop Callback function called in case of failure. (Default is Usage)
    */
-  void parse_args(const std::forward_list<std::string>& args,
+  void parseArgs(const std::forward_list<std::string>& args,
                   bool duplicates = true,
                   std::function<void(const std::string&)> stop = {});
 
@@ -617,7 +617,7 @@ inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
   auto processor =
       std::make_shared<ArgProcessorValue<T>>(&value, this->arg_type);
 
-  map.set_aliases_to_processor(names, processor);
+  map.aliasesToProcessor(names, processor);
   // Key name is the designated name representing the whole alias group
   // by our convention this is the first alias name given to arg
   const auto& key_name = std::data(names)[0];
@@ -838,7 +838,7 @@ inline std::string ArgMap::doc() const
   return ss.str();
 }
 
-inline void ArgMap::parse_args(const std::forward_list<std::string>& args,
+inline void ArgMap::parseArgs(const std::forward_list<std::string>& args,
                                bool duplicates,
                                std::function<void(const std::string&)> stop)
 {
@@ -922,7 +922,7 @@ inline void ArgMap::parse_args(const std::forward_list<std::string>& args,
   }
 
   std::string msg;
-  if (!check_required_set_provided(msg))
+  if (!checkRequiredSetProvided(msg))
     stop(msg);
 }
 
@@ -934,7 +934,7 @@ inline ArgMap& ArgMap::parse(int argc, char** argv)
   // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
   printDiagnostics(args);
-  parse_args(args);
+  parseArgs(args);
 
   return *this;
 }
@@ -974,7 +974,7 @@ inline ArgMap& ArgMap::parse(const std::string& filepath)
   // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
   printDiagnostics(args);
-  parse_args(args, false, [&filepath](const std::string& msg) {
+  parseArgs(args, false, [&filepath](const std::string& msg) {
     throw std::runtime_error("Could not parse params file: '" + filepath +
                              "'. " + msg);
   });
