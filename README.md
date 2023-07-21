@@ -29,7 +29,8 @@ ArgMap()                                    // (*) marks default.
   .named()                                  // named args (*) e.g.k=v.
   .separator(ArgMap::Separator::WHITESPACE) // change separator to
     .arg("-k", k, "doc for k", "")          // whitespace ('=' is (*)).
-    .arg({"-q", "--r", "--sos"}, aliases)   // the alias us the key name
+    .arg({"-q", "--r", "--sos"}, aliases)   // the first alias is used as
+                                            //   the key name.
     .note("an extra note")                  // no default value info.
   .toggle()                                 // add extra doc/note.
      .arg("-t", t, "doc for t", "")         // toggle flag sets bool true.
