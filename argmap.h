@@ -30,7 +30,6 @@
 #include <set>
 #include <sstream>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -291,9 +290,16 @@ private:
   // Store the args and handle aliases.
   NameToProcessMap map;
 
+  struct DocItem
+  {
+    bool is_required = false;
+    std::string key_name;
+    std::string alias_string_list;
+    std::string doc_string;
+  };
+
   // Docs held in vector until called by methods such as doc and usage
-  // 4-tuple (key name, arg name (+ value),  docString, whether required)
-  std::vector<std::tuple<std::string, std::string, std::string, bool>> docVec;
+  std::vector<DocItem> docVec;
 
   PositionalArgsList positional_args_list;
 
@@ -650,7 +656,8 @@ inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
   arg(names, value);
   std::ostringstream ss;
   ss << doc << " [ default=" << value << " ]";
-  docVec.push_back({std::data(names)[0], join(names), ss.str(), required_mode});
+  docVec.push_back(
+      DocItem{required_mode, std::data(names)[0], join(names), ss.str()});
 
   return *this;
 }
@@ -663,9 +670,10 @@ inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
 {
   arg(names, value);
 
-  docVec.push_back({std::data(names)[0], join(names), doc, required_mode});
+  docVec.push_back(
+      DocItem{required_mode, std::data(names)[0], join(names), doc});
   if (info != nullptr && info[0] != '\0')
-    std::get<1>(docVec.back()).append(" [ default=").append(info).append(" ]");
+    docVec.back().doc_string.append(" [ default=").append(info).append(" ]");
 
   return *this;
 }
@@ -688,7 +696,7 @@ inline ArgMap& ArgMap::dots(C& container, const char* name)
 
 inline ArgMap& ArgMap::note(const std::string& s)
 {
-  std::get<1>(docVec.back()).append("\t\t").append(s);
+  docVec.back().doc_string.append("\t\t").append(s);
   return *this;
 }
 
@@ -702,26 +710,25 @@ inline void ArgMap::usage(const std::string& msg) const
       docVecCopy.begin(),
       docVecCopy.end(),
       [this](const auto& item) {
-        std::string name_ext = std::get<0>(item);
-        const auto& it = map.find(name_ext);
+        const auto& it = map.find(item.key_name);
         if (it == map.end())
-          throw std::logic_error("(A) Not found in map '" + name_ext + "'.");
+          throw std::logic_error("Not found in map '" + item.key_name +
+                                 "' during partition.");
         return it->second->getArgType() != ArgType::POSITIONAL;
       });
 
   std::cerr << "Usage: " << this->progname;
-  for (const auto& doc : docVecCopy) {
-    std::string name_ext(std::get<0>(doc));
-    bool is_required = std::get<3>(doc);
-    auto it = map.find(name_ext);
+  for (auto& doc : docVecCopy) {
+    auto it = map.find(doc.key_name);
     if (it == map.end())
-      throw std::logic_error("(B) Not found in map '" + name_ext + "'.");
+      throw std::logic_error("Not found in map '" + doc.key_name +
+                             "'during printing to stream.");
     if (it->second->getArgType() == ArgType::NAMED)
-      name_ext.append(1, this->kv_separator).append("<arg>");
-    if (is_required) {
-      std::cerr << " " << name_ext;
+      doc.key_name.append(1, this->kv_separator).append("<arg>");
+    if (doc.is_required) {
+      std::cerr << " " << doc.key_name;
     } else {
-      std::cerr << " [" << name_ext << "]";
+      std::cerr << " [" << doc.key_name << "]";
     }
   }
 
@@ -820,12 +827,12 @@ inline std::string ArgMap::doc() const
       std::max_element(docVec.begin(),
                        docVec.end(),
                        [](const auto& x, const auto& y) {
-                         return std::get<0>(x).size() < std::get<0>(y).size();
+                         return x.key_name.size() < y.key_name.size();
                        });
 
-  for (const auto& p : docVec) {
-    ss << "  " << std::left << std::setw(std::get<0>(*maxSzElem).length() + 1)
-       << std::get<1>(p) << std::setw(0) << std::get<2>(p) << '\n';
+  for (const auto& [_1, _2, alias_string_list, doc_string] : docVec) {
+    ss << "  " << std::left << std::setw(maxSzElem->key_name.length() + 1)
+       << alias_string_list << std::setw(0) << doc_string << '\n';
   }
 
   return ss.str();
