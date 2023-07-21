@@ -559,12 +559,12 @@ inline void strip(std::string& s)
 {
   auto whitespaceCond = [](unsigned char c) {
     return !std::isspace(c);
-  }
+  };
 
-  auto it = std::find_if(s.begin(), s.end(), whitespaceCond);
-  s.erase(s.begin(), it);
-  auto it = std::find_if(s.rbegin(), s.rend(), whitespaceCond);
-  s.erase(it.base(), s.end());
+  auto left_it = std::find_if(s.begin(), s.end(), whitespaceCond);
+  s.erase(s.begin(), left_it);
+  auto right_it = std::find_if(s.rbegin(), s.rend(), whitespaceCond);
+  s.erase(right_it.base(), s.end());
 }
 
 // Correct the list from argv by splitting on the separator.
