@@ -48,10 +48,13 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
-Note that the script can 
+Note that the script will fetch google test for you local to the build
+(standard `_deps` directory that `cmake` creates).
 
 ### NTL tests
-Because ArgMap spun-off from HElib, the tests also test whever ArgMap can read in NTL's vector `Vec` type. To anable these tests set the configuration step with the following flag.
+Because ArgMap spun-off from HElib, the tests also test whether ArgMap can read
+in NTL's vector `Vec` type. To enable these tests set the configuration step
+with the following flag.
 
 ```cmake
 cmake -S . -B build -DNTL_TESTS=ON
