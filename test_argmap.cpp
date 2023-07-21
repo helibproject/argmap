@@ -1458,7 +1458,6 @@ TEST(TestArgMap, whitespaceInNameOfArg)
   EXPECT_THROW(amap3.arg("alice ", i, ""), std::logic_error);
 }
 
-
 TEST_F(TestArgMapCmdLine, failOnReadInNoAliasesCmdLine)
 {
   mockCmdLineArgs("./prog -a");
@@ -1487,7 +1486,7 @@ TEST_F(TestArgMapCmdLine, readInAliasesCmdLine)
       .parse(argc, argv);
 
   EXPECT_FALSE(opts.apple);
-    
+
   mockCmdLineArgs("./prog --apple");
 
   ArgMap()

@@ -262,7 +262,7 @@ private:
   {
     if (this->required_set.empty())
       return true;
-    
+
     std::ostringstream oss;
     oss << "Required argument(s) not given:\n";
     for (const auto& e : this->required_set)
@@ -320,8 +320,8 @@ private:
    * @param stop Callback function called in case of failure. (Default is Usage)
    */
   void parse_args(const std::forward_list<std::string>& args,
-                   bool duplicates = true,
-                   std::function<void(const std::string&)> stop = {});
+                  bool duplicates = true,
+                  std::function<void(const std::string&)> stop = {});
 
 public:
   enum class Separator
@@ -832,8 +832,8 @@ inline std::string ArgMap::doc() const
 }
 
 inline void ArgMap::parse_args(const std::forward_list<std::string>& args,
-                                bool duplicates,
-                                std::function<void(const std::string&)> stop)
+                               bool duplicates,
+                               std::function<void(const std::string&)> stop)
 {
   if (stop == nullptr) {
     stop = std::bind(&ArgMap::usage, this, std::placeholders::_1);
@@ -916,8 +916,7 @@ inline void ArgMap::parse_args(const std::forward_list<std::string>& args,
 
   std::string msg;
   if (!check_required_set_provided(msg))
-	  stop(msg);
-
+    stop(msg);
 }
 
 inline ArgMap& ArgMap::parse(int argc, char** argv)
