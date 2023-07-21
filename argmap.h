@@ -216,76 +216,61 @@ private:
       name_to_processor;
 };
 
+// requires latching logic.
+class PositionalArgsList
+{
+private:
+  std::vector<std::string> positional_args;
+  bool optional_flag = false;
+
+public:
+  void insert(const std::string& name, bool optional)
+  {
+    if (optional) {
+      this->optional_flag = true;
+      positional_args.push_back(name);
+    } else if (!optional_flag) {
+      positional_args.push_back(name);
+    } else {
+      throw std::logic_error(
+          "Attempting to have argument '" + name +
+          "' required after optional positional args given.");
+    }
+  }
+
+  std::vector<std::string>::iterator begin()
+  {
+    return this->positional_args.begin();
+  }
+
+  std::vector<std::string>::iterator end()
+  {
+    return this->positional_args.end();
+  }
+
+  bool empty() { return this->positional_args.empty(); }
+}; // end of PositionalArgsList
+
 /**
- * @brief Basic class for arg parsing.
- * Example use:
- * @code
- *   // Variables to be set by command line.
- *   long p = 2;                                 // default values.
- *   long m = 19;
- *   bool t = false;
- *   bool f = true;
- *   std::string k = "Hello World";
- *   std::string aliases = "Aliases";
- *
- *   ArgMap()                                    // (*) marks default.
- *     .required()                               // set args to required.
- *     .positional()                             //
- *       .arg("p", p, "doc for p")               //
- *       .arg("m", m, "doc for m", "undefined")  // special default info.
- *     .optional()                               // swap to optional args (*).
- *     .named()                                  // named args (*) e.g.k=v.
- *     .separator(ArgMap::Separator::WHITESPACE) // change separator to
- *       .arg("-k", k, "doc for k", "")          // whitespace ('=' is (*)).
- *       .arg({"-q", "--r", "--sos"}, aliases)   //
- *       .note("an extra note")                  // no default value info.
- *     .toggle()                                 // add extra doc/note.
- *        .arg("-t", t, "doc for t", "")         // toggle flag sets bool true.
- *     .toggle(false)                            // toggle flag sets bool false.
- *        .arg("-f", f, "doc for f", "")         //
- *     .helpArgs({"--myhelp"})                   // changes default help flags
- *     .parse(argc, argv);                       // (*) is {"-h", "--help"}.
- *                                               // parses and overwrites values
- * @endcode
+ * @brief class for arg parsing.
  **/
 
 class ArgMap
 {
 private:
-  // requires latching logic.
-  class PositionalArgsList
+  bool check_required_set_provided(std::string& msg) const
   {
-  private:
-    std::vector<std::string> positional_args;
-    bool optional_flag = false;
+    if (this->required_set.empty())
+      return true;
+    
+    std::ostringstream oss;
+    oss << "Required argument(s) not given:\n";
+    for (const auto& e : this->required_set)
+      oss << '\t' << e << '\n';
 
-  public:
-    void insert(const std::string& name, bool optional)
-    {
-      if (optional) {
-        this->optional_flag = true;
-        positional_args.push_back(name);
-      } else if (!optional && !optional_flag) {
-        positional_args.push_back(name);
-      } else {
-        throw std::logic_error(
-            "Attempting to have argument '" + name +
-            "' required after optional positional args given.");
-      }
-    }
-
-    std::vector<std::string>::iterator begin()
-    {
-      return this->positional_args.begin();
-    }
-
-    std::vector<std::string>::iterator end()
-    {
-      return this->positional_args.end();
-    }
-
-    bool empty() { return this->positional_args.empty(); }
-  }; // end of PositionalArgsList
+    msg = oss.str();
+    return false;
+  }
 
   ArgType arg_type = ArgType::NAMED;
   char kv_separator = '=';
@@ -334,7 +319,7 @@ private:
    * @param duplicates If true does not fail in case of duplicated arguments
    * @param stop Callback function called in case of failure. (Default is Usage)
    */
-  void simpleParse(const std::forward_list<std::string>& args,
+  void parse_args(const std::forward_list<std::string>& args,
                    bool duplicates = true,
                    std::function<void(const std::string&)> stop = {});
 
@@ -346,7 +331,17 @@ public:
     WHITESPACE
   };
 
-  // TODO add docs
+  /**
+   * @brief Add a new argument description
+   * Adds a new argument description with value of type T.
+   * Throws helib::RuntimeError if the arg key is duplicated or if the storing
+   * variable is used more than once
+   * @tparam T The type of the argument
+   * @param names The argument names, key name and its other aliases.
+   * @param value a variable where the argument will be stored. Also used as
+   * default value
+   * @return A reference to the modified ArgMap object
+   */
   template <typename T>
   ArgMap& arg(const std::initializer_list<std::string>& names, T& value);
 
@@ -383,7 +378,18 @@ public:
     return *this;
   }
 
-  // TODO
+  /**
+   * @brief Add a new argument with docs
+   * Adds a new argument description with value of type T and docs.
+   * Throws helib::RuntimeError if the arg key is duplicated or if the storing
+   * variable is used more than once
+   * @tparam T The type of the argument
+   * @param names The argument names a key and other aliases
+   * @param value a variable where the argument will be stored. Also used as
+   * default value
+   * @param doc1 Description of the argument used when displaying usage
+   * @return A reference to the modified ArgMap object
+   */
   template <typename V>
   ArgMap& arg(const std::initializer_list<std::string>& names,
               V& value,
@@ -632,9 +638,7 @@ inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
 template <typename T>
 inline ArgMap& ArgMap::arg(const std::string& name, T& value)
 {
-  // TODO
-  const std::initializer_list<std::string> names{name};
-  arg(names, value);
+  arg({name}, value);
   return *this;
 }
 
@@ -708,12 +712,13 @@ inline void ArgMap::usage(const std::string& msg) const
   std::cerr << "Usage: " << this->progname;
   for (const auto& doc : docVecCopy) {
     std::string name_ext(std::get<0>(doc));
+    bool is_required = std::get<3>(doc);
     auto it = map.find(name_ext);
     if (it == map.end())
       throw std::logic_error("(B) Not found in map '" + name_ext + "'.");
     if (it->second->getArgType() == ArgType::NAMED)
       name_ext.append(1, this->kv_separator).append("<arg>");
-    if (std::get<3>(doc)) {
+    if (is_required) {
       std::cerr << " " << name_ext;
     } else {
       std::cerr << " [" << name_ext << "]";
@@ -826,7 +831,7 @@ inline std::string ArgMap::doc() const
   return ss.str();
 }
 
-inline void ArgMap::simpleParse(const std::forward_list<std::string>& args,
+inline void ArgMap::parse_args(const std::forward_list<std::string>& args,
                                 bool duplicates,
                                 std::function<void(const std::string&)> stop)
 {
@@ -856,14 +861,14 @@ inline void ArgMap::simpleParse(const std::forward_list<std::string>& args,
       switch (ap->getArgType()) {
       case ArgType::NAMED:
         // Process value (parse and set)
-        if ((++it) == args.end())
+        if (++it == args.end())
           stop("Dangling value for named argument '" + token + "'.");
 
         if (this->kv_separator == ' ') {
           if (!ap->process(*it))
             stop("Whitespace separator issue. Value:'" + *it + "'");
         } else {
-          if ((++it) == args.end())
+          if (++it == args.end())
             stop("Dangling value for named argument '" + token +
                  "' after separator.");
           if (!ap->process(*it))
@@ -908,31 +913,22 @@ inline void ArgMap::simpleParse(const std::forward_list<std::string>& args,
       stop(msg);
     }
   }
+
+  std::string msg;
+  if (!check_required_set_provided(msg))
+	  stop(msg);
+
 }
 
 inline ArgMap& ArgMap::parse(int argc, char** argv)
 {
   this->progname = std::string(argv[0]);
-
   std::forward_list<std::string> args(argv + 1, argv + argc);
-
   splitOnSeparator(args, this->kv_separator);
-
   // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
-
   printDiagnostics(args);
-
-  simpleParse(args);
-
-  // Have the required args been provided - if not exit
-  if (!this->required_set.empty()) {
-    std::ostringstream oss;
-    oss << "Required argument(s) not given:\n";
-    for (const auto& e : this->required_set)
-      oss << '\t' << e << '\n';
-    usage(oss.str()); // exits
-  }
+  parse_args(args);
 
   return *this;
 }
@@ -971,22 +967,11 @@ inline ArgMap& ArgMap::parse(const std::string& filepath)
 
   // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
-
   printDiagnostics(args);
-
-  simpleParse(args, false, [&filepath](const std::string& msg) {
+  parse_args(args, false, [&filepath](const std::string& msg) {
     throw std::runtime_error("Could not parse params file: '" + filepath +
                              "'. " + msg);
   });
-
-  // Have the required args been provided - if not throw
-  if (!this->required_set.empty()) {
-    std::ostringstream oss;
-    oss << "Required argument(s) not given:\n";
-    for (const auto& e : this->required_set)
-      oss << '\t' << e << '\n';
-    throw std::runtime_error(oss.str());
-  }
 
   return *this;
 }

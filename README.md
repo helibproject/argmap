@@ -3,10 +3,10 @@
 ## Introduction
 
 ArgMap is a command line argument parser. It grew out of rudimentary code from
-the HElib library project, .
+the HElib library project.
 
 This repo is essentially a spin-off for ArgMap to be its own project as it has
-found use in other projects done HElib contributors and users due its feature
+found use in other projects done HElib contributors and users due to its feature
 set and terseness.
 
 ## Usage
@@ -29,7 +29,7 @@ ArgMap()                                    // (*) marks default.
   .named()                                  // named args (*) e.g.k=v.
   .separator(ArgMap::Separator::WHITESPACE) // change separator to
     .arg("-k", k, "doc for k", "")          // whitespace ('=' is (*)).
-    .arg({"-q", "--r", "--sos"}, aliases)   //
+    .arg({"-q", "--r", "--sos"}, aliases)   // the alias us the key name
     .note("an extra note")                  // no default value info.
   .toggle()                                 // add extra doc/note.
      .arg("-t", t, "doc for t", "")         // toggle flag sets bool true.
