@@ -14,8 +14,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // - Addition of aliases
 
-#ifndef _ARGMAP_H_
-#define _ARGMAP_H_
+#ifndef _ARGMAP_ARGMAP_H_
+#define _ARGMAP_ARGMAP_H_
 
 #include <algorithm>
 #include <cctype>
@@ -554,29 +554,17 @@ public:
   std::string doc() const;
 }; // End of class ArgMap
 
-// Three functions strip whitespaces before and after strings.
-inline void lstrip(std::string& s)
-{
-  auto it = std::find_if(s.begin(), s.end(), [](unsigned char c) {
-    return !std::isspace(c);
-  });
-
-  s.erase(s.begin(), it);
-}
-
-inline void rstrip(std::string& s)
-{
-  auto it = std::find_if(s.rbegin(), s.rend(), [](unsigned char c) {
-    return !std::isspace(c);
-  });
-
-  s.erase(it.base(), s.end());
-}
-
+// strip whitespaces before and after strings.
 inline void strip(std::string& s)
 {
-  lstrip(s);
-  rstrip(s);
+  auto whitespaceCond = [](unsigned char c) {
+    return !std::isspace(c);
+  }
+
+  auto it = std::find_if(s.begin(), s.end(), whitespaceCond);
+  s.erase(s.begin(), it);
+  auto it = std::find_if(s.rbegin(), s.rend(), whitespaceCond);
+  s.erase(it.base(), s.end());
 }
 
 // Correct the list from argv by splitting on the separator.
@@ -753,7 +741,6 @@ inline ArgMap& ArgMap::separator(Separator s)
     this->kv_separator = ' ';
     break;
   default:
-    // Use of class enums means it should never reach here.
     throw std::logic_error("Unrecognised option for kv separator.");
   }
 
@@ -891,9 +878,7 @@ inline void ArgMap::parseArgs(const std::forward_list<std::string>& args,
           stop("");
         break;
       default:
-        // Should never get here.
         throw std::logic_error("Unrecognised ArgType.");
-        break;
       }
 
       // Remove from required_set (if it is there)
@@ -931,7 +916,6 @@ inline ArgMap& ArgMap::parse(int argc, char** argv)
   this->progname = std::string(argv[0]);
   std::forward_list<std::string> args(argv + 1, argv + argc);
   splitOnSeparator(args, this->kv_separator);
-  // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
   printDiagnostics(args);
   parseArgs(args);
@@ -970,8 +954,6 @@ inline ArgMap& ArgMap::parse(const std::string& filepath)
   }
 
   splitOnSeparator(args, this->kv_separator);
-
-  // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
   printDiagnostics(args);
   parseArgs(args, false, [&filepath](const std::string& msg) {
@@ -984,4 +966,4 @@ inline ArgMap& ArgMap::parse(const std::string& filepath)
 
 } // namespace argmap
 
-#endif // ifndef _ARGMAP_H_
+#endif // ifndef _ARGMAP_ARGMAP_H_
