@@ -236,15 +236,8 @@ public:
     }
   }
 
-  std::vector<std::string>::iterator begin()
-  {
-    return this->positional_args.begin();
-  }
-
-  std::vector<std::string>::iterator end()
-  {
-    return this->positional_args.end();
-  }
+  auto begin() { return this->positional_args.begin(); }
+  auto end() { return this->positional_args.end(); }
 
   bool empty() { return this->positional_args.empty(); }
 }; // end of PositionalArgsList
@@ -295,6 +288,17 @@ private:
     std::string key_name;
     std::string alias_string_list;
     std::string doc_string;
+
+    DocItem(bool req,
+            const std::string& kname,
+            const std::string& aliases,
+            const std::string& dstring) :
+        is_required(req),
+        key_name(kname),
+        alias_string_list(aliases),
+        doc_string(dstring)
+    {
+    }
   };
 
   // Docs held in vector until called by methods such as doc and usage
@@ -653,8 +657,10 @@ inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
   arg(names, value);
   std::ostringstream ss;
   ss << doc << " [ default=" << value << " ]";
-  docVec.push_back(
-      DocItem{required_mode, std::data(names)[0], join(names), ss.str()});
+  docVec.emplace_back(required_mode,
+                      std::data(names)[0],
+                      join(names),
+                      ss.str());
 
   return *this;
 }
@@ -667,8 +673,7 @@ inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
 {
   arg(names, value);
 
-  docVec.push_back(
-      DocItem{required_mode, std::data(names)[0], join(names), doc});
+  docVec.emplace_back(required_mode, std::data(names)[0], join(names), doc);
   if (info != nullptr && info[0] != '\0')
     docVec.back().doc_string.append(" [ default=").append(info).append(" ]");
 
