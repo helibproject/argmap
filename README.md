@@ -12,8 +12,8 @@ set and terseness.
 ## Usage
 
 ```c++
-// Variables to be set by command line.
-long p = 2;                                 // default values.
+// Variables to be set by command line with default values.
+long p = 2;
 long m = 19;
 bool t = false;
 bool f = true;
