@@ -159,14 +159,13 @@ public:
   NameToProcessMap() = default;
 
   void nameToProcessor(const std::string& name,
-                             const ArgProcessorPtr& processor)
+                       const ArgProcessorPtr& processor)
   {
     name_to_processor[name] = processor;
   }
 
-  void aliasesToProcessor(
-      const std::initializer_list<std::string>& aliases,
-      const ArgProcessorPtr& processor)
+  void aliasesToProcessor(const std::initializer_list<std::string>& aliases,
+                          const ArgProcessorPtr& processor)
   {
     // Sanity check - Must have at least one alias
     if (std::empty(aliases))
@@ -326,8 +325,8 @@ private:
    * @param stop Callback function called in case of failure. (Default is Usage)
    */
   void parseArgs(const std::forward_list<std::string>& args,
-                  bool duplicates = true,
-                  std::function<void(const std::string&)> stop = {});
+                 bool duplicates = true,
+                 std::function<void(const std::string&)> stop = {});
 
 public:
   enum class Separator
@@ -557,9 +556,7 @@ public:
 // strip whitespaces before and after strings.
 inline void strip(std::string& s)
 {
-  auto whitespaceCond = [](unsigned char c) {
-    return !std::isspace(c);
-  };
+  auto whitespaceCond = [](unsigned char c) { return !std::isspace(c); };
 
   auto left_it = std::find_if(s.begin(), s.end(), whitespaceCond);
   s.erase(s.begin(), left_it);
@@ -788,23 +785,22 @@ inline ArgMap& ArgMap::diagnostics(std::ostream& ostrm)
 inline void ArgMap::printDiagnostics(
     const std::forward_list<std::string>& args) const
 {
-  if (this->diagnostics_strm != nullptr) {
-    // argv as seen by ArgMap
-    *this->diagnostics_strm << "Args pre-parse:\n";
-    for (const auto& e : args) {
-      *this->diagnostics_strm << e << std::endl;
+  if (this->diagnostics_strm == nullptr)
+    return;
+
+  auto writeToStream = [this](auto collection) {
+    for (const auto& item : collection) {
+      *this->diagnostics_strm << item << '\n';
     }
-    // required set
-    *this->diagnostics_strm << "Required args set:\n";
-    for (const auto& e : required_set) {
-      *this->diagnostics_strm << e << std::endl;
-    }
-    // optional set
-    *this->diagnostics_strm << "Optional args set:\n";
-    for (const auto& e : optional_set) {
-      *this->diagnostics_strm << e << std::endl;
-    }
-  }
+  };
+
+  *this->diagnostics_strm << "Args pre-parse:\n";
+  writeToStream(args);
+  *this->diagnostics_strm << "Required args set:\n";
+  writeToStream(required_set);
+  *this->diagnostics_strm << "Optional args set:\n";
+  writeToStream(optional_set);
+  *this->diagnostics_strm << std::flush;
 }
 
 inline std::string ArgMap::doc() const
@@ -826,8 +822,8 @@ inline std::string ArgMap::doc() const
 }
 
 inline void ArgMap::parseArgs(const std::forward_list<std::string>& args,
-                               bool duplicates,
-                               std::function<void(const std::string&)> stop)
+                              bool duplicates,
+                              std::function<void(const std::string&)> stop)
 {
   if (stop == nullptr) {
     stop = std::bind(&ArgMap::usage, this, std::placeholders::_1);
