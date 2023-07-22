@@ -14,7 +14,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // - Addition of aliases
 
-#include <cstring> // strcpy
 #include <set>
 #include <array>
 #include <algorithm>
@@ -83,8 +82,9 @@ public:
 
     // Copy strings to argv
     for (int i = 0; i < this->argc; i++) {
-      this->argv[i] = new char[words[i].length() + 1];
-      strcpy(this->argv[i], words[i].c_str());
+      int sz = words[i].length() + 1;
+      this->argv[i] = new char[sz];
+      std::copy_n(words[i].c_str(), sz, this->argv[i]);
     }
 
     this->argv[argc] = nullptr;

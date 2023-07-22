@@ -18,7 +18,6 @@
 #define ARGMAP_ARGMAP_H
 
 #include <algorithm>
-#include <cctype>
 #include <forward_list>
 #include <fstream>
 #include <functional>
@@ -33,6 +32,8 @@
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
+
+#include <cctype>
 
 /**
  * @file ArgMap.h
