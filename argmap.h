@@ -14,8 +14,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // - Addition of aliases
 
-#ifndef _ARGMAP_ARGMAP_H_
-#define _ARGMAP_ARGMAP_H_
+#ifndef ARGMAP_ARGMAP_H
+#define ARGMAP_ARGMAP_H
 
 #include <algorithm>
 #include <cctype>
@@ -423,7 +423,19 @@ public:
     return *this;
   }
 
-  // TODO
+  /**
+   * @brief Add a new argument with docs and default description
+   * Adds a new argument description with value of type T, with docs and
+   * default description. Throws helib::RuntimeError if the arg key is
+   * duplicated or if the storing variable is used more than once
+   * @tparam V The type of the argument
+   * @param names The argument names a key and other aliases
+   * @param value a variable where the argument will be stored. Also used as
+   * default value
+   * @param doc1 Description of the argument used when displaying usage
+   * @param info The default value description (ignored if nullptr or "")
+   * @return A reference to the modified ArgMap object
+   */
   template <typename V>
   ArgMap& arg(const std::initializer_list<std::string>& names,
               V& value,
@@ -962,4 +974,4 @@ inline ArgMap& ArgMap::parse(const std::string& filepath)
 
 } // namespace argmap
 
-#endif // ifndef _ARGMAP_ARGMAP_H_
+#endif // ifndef ARGMAP_ARGMAP_H
