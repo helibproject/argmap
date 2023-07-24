@@ -3,11 +3,11 @@
 ## Introduction
 
 ArgMap is a command line argument parser. It grew out of rudimentary code from
-the HElib library project.
+the [HElib](https://github.com/homenc/HElib) library project.
 
 This repo is essentially a spin-off for ArgMap to be its own project as it has
-found use in other projects done HElib contributors and users due to its feature
-set and terseness.
+found use in other projects done by HElib contributors and users due to its
+feature set and terseness.
 
 ## Usage
 
@@ -49,15 +49,15 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
-Note that the script will fetch google test for you local to the build
+Note that the script will fetch [google
+test](https://github.com/google/googletest) for you local to the build
 (standard `_deps` directory that `cmake` creates).
 
 ### NTL tests
 Because ArgMap spun-off from HElib, the tests also test whether ArgMap can read
-in NTL's vector `Vec` type. To enable these tests set the configuration step
-with the following flag.
+in [NTL's](https://github.com/libntl/ntl) vector `Vec` type. To enable these
+tests set the configuration step with the following flag.
 
 ```cmake
 cmake -S . -B build -DNTL_TESTS=ON
 ```
-

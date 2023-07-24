@@ -150,7 +150,7 @@ public:
 }; // end of ArgProcessorValue
 
 /**
- * @brief class for handlgin names (and their aliases) to which processes to
+ * @brief class for handling names (and their aliases) to which processes to
  *use.
  **/
 class NameToProcessMap
