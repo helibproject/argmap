@@ -755,7 +755,7 @@ inline ArgMap& ArgMap::separator(Separator s)
     this->kv_separator = ' ';
     break;
   default:
-    throw std::logic_error("Unrecognised option for kv separator.");
+    throw std::logic_error("Unknown option for kv separator.");
   }
 
   return *this;
@@ -889,7 +889,7 @@ inline void ArgMap::parseArgs(const std::forward_list<std::string>& args,
           stop("");
         break;
       default:
-        throw std::logic_error("Unrecognised ArgType.");
+        throw std::logic_error("Unknown ArgType.");
       }
 
       // Remove from required_set (if it is there)
