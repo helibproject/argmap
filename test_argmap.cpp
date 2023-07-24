@@ -14,7 +14,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // - Addition of aliases
 
-#include <cstring> // strcpy
 #include <set>
 #include <array>
 #include <algorithm>
@@ -83,8 +82,9 @@ public:
 
     // Copy strings to argv
     for (int i = 0; i < this->argc; i++) {
-      this->argv[i] = new char[words[i].length() + 1];
-      strcpy(this->argv[i], words[i].c_str());
+      int sz = words[i].length() + 1;
+      this->argv[i] = new char[sz];
+      std::copy_n(words[i].c_str(), sz, this->argv[i]);
     }
 
     this->argv[argc] = nullptr;
@@ -357,7 +357,7 @@ TEST_F(DeathTestArgMapCmdLine, illFormedCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "^Unrecognised argument 'alic'\nUsage.*");
+              "^Unknown argument 'alic'\nUsage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine, danglingSeparatorCmdLine)
@@ -665,7 +665,7 @@ TEST_F(DeathTestArgMapCmdLine, unrecognisedArgsCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "^Unrecognised argument 'lice'\nUsage.*");
+              "^Unknown argument 'lice'\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, unrecognisedArgsFromFile)
@@ -758,7 +758,7 @@ TEST_F(DeathTestArgMapCmdLine, wrongSeparatorNonWhitespaceCaseCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "^Unrecognised argument 'alice:1'\nUsage.*");
+              "^Unknown argument 'alice:1'\nUsage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseCmdLine)
@@ -780,7 +780,7 @@ TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "^Unrecognised argument 'alice=1'\nUsage.*");
+              "^Unknown argument 'alice=1'\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, changingSeparatorFromFile)
@@ -900,7 +900,7 @@ TEST_F(DeathTestArgMapCmdLine, tooManyPositionalArgsCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              ("^Unrecognised argument 'bob5'\n"
+              ("^Unknown argument 'bob5'\n"
                "There could be too many positional arguments\n"
                "Usage.*"));
 }
@@ -1458,7 +1458,6 @@ TEST(TestArgMap, whitespaceInNameOfArg)
   EXPECT_THROW(amap3.arg("alice ", i, ""), std::logic_error);
 }
 
-
 TEST_F(TestArgMapCmdLine, failOnReadInNoAliasesCmdLine)
 {
   mockCmdLineArgs("./prog -a");
@@ -1487,7 +1486,7 @@ TEST_F(TestArgMapCmdLine, readInAliasesCmdLine)
       .parse(argc, argv);
 
   EXPECT_FALSE(opts.apple);
-    
+
   mockCmdLineArgs("./prog --apple");
 
   ArgMap()
@@ -1547,6 +1546,6 @@ TEST_F(TestArgMapSampleFile, readInNTLVectorFromFile)
   EXPECT_EQ(opts.arg1, test_v);
 }
 
-#endif // End of NTL tests
+#endif  // End of NTL tests
 
-} // namespace
+}  // namespace
