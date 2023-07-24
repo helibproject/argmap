@@ -827,11 +827,11 @@ inline std::string ArgMap::doc() const
       std::max_element(docVec.begin(),
                        docVec.end(),
                        [](const auto& x, const auto& y) {
-                         return x.key_name.size() < y.key_name.size();
+                         return x.alias_string_list.size() < y.alias_string_list.size();
                        });
 
   for (const auto& doc_item : docVec) {
-    ss << "  " << std::left << std::setw(maxSzElem->key_name.length() + 1)
+    ss << "  " << std::left << std::setw(maxSzElem->alias_string_list.length() + 1)
        << doc_item.alias_string_list << std::setw(0) << doc_item.doc_string << '\n';
   }
 

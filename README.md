@@ -9,8 +9,16 @@ This repo is essentially a spin-off for ArgMap to be its own project as it has
 found use in other projects done by HElib contributors and users due to its
 feature set and terseness.
 
-## Usage
+## Integration
+Argmap is header-only and [argmap.h](argmap.h) is the single required file. You
+must add
+```cpp
+#include "argmap/argmap.h"
+```
+to any file you wish to use the argument parser in and enable C++17 (e.g.,
+-std=c++17 for GCC and Clang).
 
+## Usage
 ```c++
 // Variables to be set by command line with default values.
 long p = 2;
@@ -20,25 +28,24 @@ bool f = true;
 std::string k = "Hello World";
 std::string aliases = "Aliases";
 
-ArgMap()                                    // (*) marks default.
-  .required()                               // set args to required.
-  .positional()                             //
-    .arg("p", p, "doc for p")               //
-    .arg("m", m, "doc for m", "undefined")  // special default info.
-  .optional()                               // swap to optional args (*).
-  .named()                                  // named args (*) e.g.k=v.
-  .separator(ArgMap::Separator::WHITESPACE) // change separator to
-    .arg("-k", k, "doc for k", "")          // whitespace ('=' is (*)).
-    .arg({"-q", "--r", "--sos"}, aliases)   // the first alias is used as
-                                            //   the key name.
-    .note("an extra note")                  // no default value info.
-  .toggle()                                 // add extra doc/note.
-     .arg("-t", t, "doc for t", "")         // toggle flag sets bool true.
-  .toggle(false)                            // toggle flag sets bool false.
-     .arg("-f", f, "doc for f", "")         //
-  .helpArgs({"--myhelp"})                   // changes default help flags
-  .parse(argc, argv);                       // (*) is {"-h", "--help"}.
-                                            // parses and overwrites values
+argmap::ArgMap()                                    // (*) marks default.
+  .required()                                       // set args to required.
+  .positional()                                     // positional arguments appear
+    .arg("p", p, "doc for p")                       //   in order of declaration.
+    .arg("m", m, "doc for m", "undefined")          // special default info.
+  .optional()                                       // swap to optional args (*).
+  .named()                                          // named args (*) e.g.k=v.
+  .separator(argmap::ArgMap::Separator::WHITESPACE) // change separator to
+    .arg("-k", k, "doc for k", "")                  // whitespace ('=' is (*)).
+    .arg({"-q", "--r", "--sos"}, aliases)           // {} is how to declare aliases.
+    .note("an extra note")                          // no default value info.
+  .toggle()                                         // add extra doc/note.
+     .arg("-t", t, "doc for t", "")                 // toggle flag sets bool true.
+  .toggle(false)                                    // toggle flag sets bool false.
+     .arg("-f", f, "doc for f", "")                 //
+  .helpArgs({"--myhelp"})                           // changes default help flags
+  .parse(argc, argv);                               // (*) is {"-h", "--help"}.
+                                                    // parses and overwrites values
 ```
 
 ## Running the tests
