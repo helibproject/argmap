@@ -42,15 +42,15 @@ ArgMap()                                    // (*) marks default.
 ```
 
 ## Running the tests
-Tests are written in Google Test and can be built using the provided `cmake` script.
+Tests are written in [Google Test](https://github.com/google/googletest) and
+can be built using the provided `cmake` script.
 
 ```bash
 cmake -S . -B build
 cmake --build build -j
 ```
 
-Note that the script will fetch [google
-test](https://github.com/google/googletest) for you local to the build
+Note that the script will fetch google test for you local to the build
 (standard `_deps` directory that `cmake` creates).
 
 ### NTL tests
