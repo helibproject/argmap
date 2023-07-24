@@ -70,7 +70,7 @@ struct ArgProcessor
   virtual ~ArgProcessor() = default;
   virtual ArgType getArgType() = 0;
   virtual bool process(const std::string& s) = 0;
-}; // end of ArgProcessor
+};  // end of ArgProcessor
 
 template <typename C>
 class ArgProcessorContainer : public ArgProcessor
@@ -110,8 +110,7 @@ public:
   bool process(const std::string& s) override { return this->doProcess(s); }
 
   explicit ArgProcessorContainer(C* c) : container(c) {}
-
-}; // end of ArgProcessorContainer
+};  // end of ArgProcessorContainer
 
 // ArgProcessorValue: templated subclasses
 template <typename T>
@@ -138,7 +137,7 @@ private:
   bool doProcess(const S& s)
   {
     std::istringstream iss(s);
-    return bool(iss >> *value);
+    return static_cast<bool>(iss >> *value);
   }
 
 public:
@@ -147,7 +146,7 @@ public:
   bool process(const std::string& s) override { return this->doProcess(s); }
 
   explicit ArgProcessorValue(T* v, ArgType at) : value(v), arg_type(at) {}
-}; // end of ArgProcessorValue
+};  // end of ArgProcessorValue
 
 /**
  * @brief class for handling names (and their aliases) to which processes to
@@ -241,7 +240,7 @@ public:
   auto end() { return this->positional_args.end(); }
 
   bool empty() { return this->positional_args.empty(); }
-}; // end of PositionalArgsList
+};  // end of PositionalArgsList
 
 /**
  * @brief class for arg parsing.
@@ -568,7 +567,7 @@ public:
    * @return the argument documentation string
    */
   std::string doc() const;
-}; // End of class ArgMap
+};  // End of class ArgMap
 
 // strip whitespaces before and after strings.
 inline void strip(std::string& s)
@@ -656,12 +655,12 @@ inline ArgMap& ArgMap::arg(const std::initializer_list<std::string>& names,
                            const std::string& doc)
 {
   arg(names, value);
-  std::ostringstream ss;
-  ss << doc << " [ default=" << value << " ]";
+  std::ostringstream doc_stream;
+  doc_stream << doc << " [ default=" << value << " ]";
   docVec.emplace_back(required_mode,
                       std::data(names)[0],
                       join(names),
-                      ss.str());
+                      doc_stream.str());
 
   return *this;
 }
@@ -831,9 +830,9 @@ inline std::string ArgMap::doc() const
                          return x.key_name.size() < y.key_name.size();
                        });
 
-  for (const auto& [_1, _2, alias_string_list, doc_string] : docVec) {
+  for (const auto& doc_item : docVec) {
     ss << "  " << std::left << std::setw(maxSzElem->key_name.length() + 1)
-       << alias_string_list << std::setw(0) << doc_string << '\n';
+       << doc_item.alias_string_list << std::setw(0) << doc_item.doc_string << '\n';
   }
 
   return ss.str();
@@ -849,7 +848,6 @@ inline void ArgMap::parseArgs(const std::forward_list<std::string>& args,
 
   auto pos_args_it = this->positional_args_list.begin();
   for (auto it = args.begin(); it != args.end(); ++it) {
-
     const std::string token = *it;
 
     if (this->help_tokens.count(token))
@@ -865,7 +863,6 @@ inline void ArgMap::parseArgs(const std::forward_list<std::string>& args,
         (map_it == this->map.end()) ? nullptr : map_it->second;
 
     if (ap && ap->getArgType() != ArgType::POSITIONAL) {
-
       switch (ap->getArgType()) {
       case ArgType::NAMED:
         // Process value (parse and set)
@@ -913,7 +910,7 @@ inline void ArgMap::parseArgs(const std::forward_list<std::string>& args,
     } else if (this->dots_enabled) {
       this->dots_ap->process(token);
     } else {
-      std::string msg = "Unrecognised argument \'" + token + "\'";
+      std::string msg = "Unknown argument \'" + token + "\'";
       if (!this->positional_args_list.empty())
         msg.append("\nThere could be too many positional arguments");
       stop(msg);
@@ -939,8 +936,7 @@ inline ArgMap& ArgMap::parse(int argc, char** argv)
 
 inline ArgMap& ArgMap::parse(const std::string& filepath)
 {
-
-  if (this->kv_separator == ' ') { // Not from files.
+  if (this->kv_separator == ' ') {  // Not from files.
     throw std::logic_error("Whitespace separator not possible from files.");
   }
 
@@ -962,7 +958,7 @@ inline ArgMap& ArgMap::parse(const std::string& filepath)
   std::string line;
   while (getline(file, line)) {
     if (line.empty() || std::regex_search(line, re_comment_lines)) {
-      continue; // ignore comment lines and empties.
+      continue;  // ignore comment lines and empties.
     }
     it = args.insert_after(it, line);
   }
@@ -978,6 +974,6 @@ inline ArgMap& ArgMap::parse(const std::string& filepath)
   return *this;
 }
 
-} // namespace argmap
+}  // namespace argmap
 
-#endif // ifndef ARGMAP_ARGMAP_H
+#endif  // ifndef ARGMAP_ARGMAP_H

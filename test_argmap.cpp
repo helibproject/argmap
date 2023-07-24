@@ -357,7 +357,7 @@ TEST_F(DeathTestArgMapCmdLine, illFormedCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "^Unrecognised argument 'alic'\nUsage.*");
+              "^Unknown argument 'alic'\nUsage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine, danglingSeparatorCmdLine)
@@ -665,7 +665,7 @@ TEST_F(DeathTestArgMapCmdLine, unrecognisedArgsCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "^Unrecognised argument 'lice'\nUsage.*");
+              "^Unknown argument 'lice'\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, unrecognisedArgsFromFile)
@@ -758,7 +758,7 @@ TEST_F(DeathTestArgMapCmdLine, wrongSeparatorNonWhitespaceCaseCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "^Unrecognised argument 'alice:1'\nUsage.*");
+              "^Unknown argument 'alice:1'\nUsage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseCmdLine)
@@ -780,7 +780,7 @@ TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "^Unrecognised argument 'alice=1'\nUsage.*");
+              "^Unknown argument 'alice=1'\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, changingSeparatorFromFile)
@@ -900,7 +900,7 @@ TEST_F(DeathTestArgMapCmdLine, tooManyPositionalArgsCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              ("^Unrecognised argument 'bob5'\n"
+              ("^Unknown argument 'bob5'\n"
                "There could be too many positional arguments\n"
                "Usage.*"));
 }
@@ -1546,6 +1546,6 @@ TEST_F(TestArgMapSampleFile, readInNTLVectorFromFile)
   EXPECT_EQ(opts.arg1, test_v);
 }
 
-#endif // End of NTL tests
+#endif  // End of NTL tests
 
-} // namespace
+}  // namespace
