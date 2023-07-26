@@ -22,6 +22,7 @@
 #include <sstream>
 #include <vector>
 #include <fstream>
+#include <filesystem>
 #include <cstdio>
 #include <chrono>
 #include <random>
@@ -33,6 +34,8 @@
 #include "gtest/gtest.h"
 
 #include "argmap.h"
+
+namespace fs = std::filesystem;
 
 using argmap::ArgMap;
 
@@ -1544,6 +1547,20 @@ TEST_F(TestArgMapSampleFile, readInNTLVectorFromFile)
   ss >> test_v;
 
   EXPECT_EQ(opts.arg1, test_v);
+}
+
+TEST_F(TestArgMapCmdLine, compatibilityWithPath)
+{
+  mockCmdLineArgs("./prog path=this/is/a/path");
+
+  fs::path path;
+
+  ArgMap()
+      .required()
+      .arg("path", path, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(path, "this/is/a/path");
 }
 
 #endif  // End of NTL tests
