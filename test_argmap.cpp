@@ -1500,6 +1500,20 @@ TEST_F(TestArgMapCmdLine, readInAliasesCmdLine)
   EXPECT_TRUE(opts.apple);
 }
 
+TEST_F(TestArgMapCmdLine, compatibilityWithPath)
+{
+  mockCmdLineArgs("./prog path=this/is/a/path");
+
+  fs::path path;
+
+  ArgMap()
+      .required()
+      .arg("path", path, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(path, "this/is/a/path");
+}
+
 #ifdef NTL_TESTS
 #include <NTL/vector.h>
 
@@ -1547,20 +1561,6 @@ TEST_F(TestArgMapSampleFile, readInNTLVectorFromFile)
   ss >> test_v;
 
   EXPECT_EQ(opts.arg1, test_v);
-}
-
-TEST_F(TestArgMapCmdLine, compatibilityWithPath)
-{
-  mockCmdLineArgs("./prog path=this/is/a/path");
-
-  fs::path path;
-
-  ArgMap()
-      .required()
-      .arg("path", path, "message string", "")
-      .parse(argc, argv);
-
-  EXPECT_EQ(path, "this/is/a/path");
 }
 
 #endif  // End of NTL tests
