@@ -10,8 +10,8 @@ found use in other projects done by HElib contributors and users due to its
 feature set and terseness.
 
 ## Integration
-Argmap is header-only and [argmap.h](argmap.h) is the single required file. You
-must add
+Argmap is a header-only library, therefore [argmap.h](argmap.h) is the single
+required file. You must add
 ```cpp
 #include "argmap/argmap.h"
 ```
@@ -60,13 +60,13 @@ cmake --build build -j
 Note that the script will fetch google test for you local to the build
 (standard `_deps` directory that `cmake` creates).
 
-Run
+Run the tests with
 ```bash
 ./build/bin/test_argmap
 ```
 
 ### NTL tests
-Because ArgMap spun-off from HElib, the tests also test whether ArgMap can read
+Because ArgMap spun off from HElib, the tests also test whether ArgMap can read
 in [NTL's](https://github.com/libntl/ntl) vector `Vec` type. To enable these
 tests set the configuration step with the following flag.
 
