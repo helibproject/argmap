@@ -269,6 +269,7 @@ private:
   bool required_mode = false;
   bool dots_enabled = false;
   bool named_args_only = true;
+  bool ignore_unknown_args = false;
 
   std::string progname;
   std::string dots_name;
@@ -504,6 +505,14 @@ public:
    * @return A reference to the ArgMap object
    */
   ArgMap& named();
+
+  /**
+   * @brief Sets parser to ignore unknown arguments
+   * Sets parser to ignore unknown arguments otherwise parser exists whenever
+   * an unknown argument is encountered
+   * @return A reference to the ArgMap object
+   */
+  ArgMap& ignoreUnknown(bool t = false);
 
   /**
    * @brief Swaps to positional arg type
@@ -786,6 +795,12 @@ inline ArgMap& ArgMap::named()
   return *this;
 }
 
+inline ArgMap& ArgMap::ignoreUnknown(bool t)
+{
+    this->ignore_unknown_args = t;
+    return *this;
+}
+
 inline ArgMap& ArgMap::positional()
 {
   this->named_args_only = false;
@@ -910,10 +925,12 @@ inline void ArgMap::parseArgs(const std::forward_list<std::string>& args,
     } else if (this->dots_enabled) {
       this->dots_ap->process(token);
     } else {
-      std::string msg = "Unknown argument \'" + token + "\'";
-      if (!this->positional_args_list.empty())
-        msg.append("\nThere could be too many positional arguments");
-      stop(msg);
+      if(!this->ignore_unknown_args) {
+        std::string msg = "Unknown argument \'" + token + "\'";
+        if (!this->positional_args_list.empty())
+            msg.append("\nThere could be too many positional arguments");
+        stop(msg);
+      }
     }
   }
 
